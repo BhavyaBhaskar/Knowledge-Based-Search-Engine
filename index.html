@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DocSensei — Futuristic RAG Interface</title>
+
+<!-- Google font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg-0: #05060a;
+    --bg-1: rgba(12,16,25,0.7);
+    --card: rgba(255,255,255,0.03);
+    --glass: rgba(255,255,255,0.04);
+    --accent-a: #6ee7ff;
+    --accent-b: #9b6bff;
+    --accent-c: #00ffd1;
+    --muted: #9aa4ad;
+    --radius: 16px;
+    --glass-border: rgba(255,255,255,0.06);
+    --shadow-lg: 0 20px 50px rgba(3,6,10,0.7);
+    font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+
+  html,body{height:100%}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(800px 400px at 10% 10%, rgba(155,107,255,0.07), transparent),
+      radial-gradient(700px 350px at 90% 90%, rgba(110,231,255,0.04), transparent),
+      linear-gradient(180deg,var(--bg-0),#071018 70%);
+    color:#e6f0f4;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* Layout */
+  .app {
+    width:100%;
+    max-width:1160px;
+    display:grid;
+    grid-template-columns: 380px 1fr;
+    gap:26px;
+    align-items:stretch;
+  }
+
+  /* Left panel: upload + info */
+  .panel {
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius: var(--radius);
+    padding:20px;
+    border:1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    min-height:520px;
+  }
+
+  .brand {
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .logo {
+    width:56px;height:56px;border-radius:12px;
+    background: linear-gradient(135deg,var(--accent-b),var(--accent-a));
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#051018;
+    box-shadow: 0 6px 26px rgba(102,64,255,0.16);
+  }
+  .brand .title { font-size:18px; font-weight:700; letter-spacing:0.2px }
+  .brand .sub { font-size:12px; color:var(--muted); margin-top:4px }
+
+  /* Drop area */
+  .drop {
+    margin-top:6px;
+    border-radius:12px;
+    padding:18px;
+    text-align:center;
+    border:1px dashed rgba(255,255,255,0.04);
+    background: linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.006));
+    transition: transform .18s cubic-bezier(.2,.9,.3,1), box-shadow .18s, border-color .12s;
+    cursor:pointer;
+    position:relative;
+    overflow:hidden;
+  }
+  .drop:hover{ transform: translateY(-4px); box-shadow: 0 18px 50px rgba(2,6,9,0.6); }
+  .drop.dragover { border-color: rgba(155,107,255,0.9); box-shadow: 0 8px 30px rgba(155,107,255,0.06) inset; }
+
+  .drop .icon {
+    width:56px;height:56px;border-radius:10px; margin: 0 auto 8px;
+    background: linear-gradient(135deg, rgba(110,231,255,0.12), rgba(155,107,255,0.09));
+    display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--accent-a);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .drop .hint { font-weight:600; letter-spacing:0.2px }
+  .drop .mini { font-size:13px; color:var(--muted); margin-top:6px }
+
+  /* File preview */
+  .file-preview {
+    display:flex; gap:12px; align-items:center; padding:10px; border-radius:10px; background:var(--glass); border:1px solid var(--glass-border);
+  }
+  .file-preview .meta { flex:1 }
+  .file-preview .name { font-weight:700 }
+  .file-preview .info { font-size:12px; color:var(--muted); margin-top:4px }
+  .file-actions { display:flex; gap:8px; align-items:center }
+
+  /* Buttons */
+  .btn {
+    background: linear-gradient(90deg,var(--accent-b),var(--accent-a));
+    padding:10px 14px; border-radius:10px; color:#041018; font-weight:700; border:none; cursor:pointer;
+    box-shadow: 0 10px 28px rgba(99,58,255,0.12);
+    transition: transform .12s, box-shadow .12s, opacity .12s;
+  }
+  .btn:active{ transform: translateY(1px) }
+  .btn.ghost {
+    background: transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted); font-weight:600;
+  }
+
+  .muted { color:var(--muted); font-size:13px }
+
+  /* Right panel: chat */
+  .chat {
+    background: linear-gradient(180deg, rgba(255,255,255,0.018), transparent);
+    border-radius: var(--radius);
+    padding:18px;
+    min-height:520px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    border:1px solid var(--glass-border);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .chat-header {
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .chat-title { font-size:16px; font-weight:700 }
+  .chat-sub { font-size:13px; color:var(--muted) }
+
+  .messages {
+    flex:1; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:12px;
+    scroll-behavior: smooth;
+  }
+
+  /* bubbles */
+  .bubble {
+    max-width:78%;
+    padding:12px 14px;
+    border-radius:12px;
+    backdrop-filter: blur(6px) saturate(120%);
+    box-shadow: 0 6px 20px rgba(2,6,9,0.6);
+    line-height:1.5;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .bubble.user {
+    align-self:flex-end;
+    background: linear-gradient(180deg, rgba(124,92,255,0.16), rgba(110,231,255,0.06));
+    color:#021018;
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .bubble.ai {
+    align-self:flex-start;
+    background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.012));
+    color:#e6f0f4;
+    border:1px solid rgba(255,255,255,0.03);
+  }
+
+  .meta-row { display:flex; gap:10px; align-items:center; margin-bottom:6px }
+  .avatar {
+    width:34px;height:34px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;color:#051018;
+  }
+  .avatar.user{ background: linear-gradient(135deg,var(--accent-b),var(--accent-c)); }
+  .avatar.ai{ background: linear-gradient(135deg,#ffffff20, #ffffff10); color:var(--muted); font-weight:700; }
+
+  /* composer */
+  .composer {
+    display:flex; gap:10px; align-items:center; margin-top:8px;
+  }
+  .input {
+    flex:1; padding:12px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.03);
+    background: transparent; color: inherit; outline:none; font-size:14px;
+  }
+  .send {
+    width:52px;height:48px;border-radius:12px;border:none;cursor:pointer;display:inline-grid;place-items:center;
+    background: linear-gradient(90deg,var(--accent-c),var(--accent-a)); color:#021018; font-weight:700;
+    box-shadow: 0 8px 26px rgba(0,255,209,0.06);
+  }
+
+  /* orb loader */
+  .orb {
+    width:48px;height:48px;border-radius:999px;display:inline-block;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), rgba(255,255,255,0.2)),
+                conic-gradient(from 180deg, rgba(155,107,255,0.95), rgba(110,231,255,0.95));
+    filter: blur(6px);
+    box-shadow: 0 10px 40px rgba(124,92,255,0.12), 0 2px 12px rgba(0,255,209,0.04) inset;
+    animation: orb-rotate 1.8s linear infinite;
+  }
+  @keyframes orb-rotate { 0%{ transform: rotate(0deg) } 100% { transform: rotate(360deg) } }
+
+  /* small utilities */
+  .status { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted) }
+  .error { color: #ff8b8b; font-weight:700 }
+
+  /* responsive */
+  @media (max-width:980px){
+    .app { grid-template-columns: 1fr; max-width:680px; padding:12px; }
+    .panel { order:2 }
+    .chat { order:1 }
+  }
+
+  /* small typing cursor */
+  .typing-cursor {
+    display:inline-block;
+    width:6px;
+    height:18px;
+    margin-left:6px;
+    background: linear-gradient(180deg, #e6f0f4, #9aa4ad);
+    border-radius:2px;
+    animation: blink 1s steps(2,end) infinite;
+    vertical-align:middle;
+  }
+  @keyframes blink { 50% { opacity: 0 } 100% { opacity: 1 } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- LEFT PANEL -->
+    <div class="panel" id="leftPanel">
+      <div class="brand">
+        <div class="logo">D</div>
+        <div>
+          <div class="title">DocSensei</div>
+          <div class="sub">Ask documents. Get concise, sourced answers.</div>
+        </div>
+      </div>
+
+      <div class="drop" id="dropzone" title="Click or drop files here">
+        <div class="icon">📄</div>
+        <div class="hint">Drop file here or click to select</div>
+        <div class="mini muted">Supported: PDF, CSV, XLSX, PPTX. Multi-queries supported after upload.</div>
+        <input id="fileInput" type="file" style="display:none" accept=".pdf,.csv,.xlsx,.xls,.pptx,.ppt">
+      </div>
+
+      <div id="fileArea" style="display:none">
+        <div class="file-preview" id="filePreview">
+          <div class="meta">
+            <div class="name" id="fileName">sample.pdf</div>
+            <div class="info" id="fileInfo">45 KB • PDF</div>
+          </div>
+          <div class="file-actions">
+            <button class="btn ghost small" id="removeFile">Remove</button>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <button class="btn" id="startOver">Upload different file</button>
+          <button class="btn ghost" id="openDocs">Docs</button>
+        </div>
+      </div>
+
+      <div style="margin-top:auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div class="muted">Model</div>
+          <div class="muted">gemini-2.5-flash</div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="muted">Status</div>
+        <div class="status" style="margin-top:8px">
+          <span id="llmStatus">Idle</span>
+          <div style="flex:1"></div>
+          <div id="orbSmall" style="display:none"><div class="orb" style="width:30px;height:30px;filter:blur(3px)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: Chat -->
+    <div class="chat" id="chatPanel">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title">Ask your document</div>
+          <div class="chat-sub">Type a question and press Enter — you can ask multiple questions for the uploaded document.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div id="apiKeyHint" class="muted">API key loaded</div>
+        </div>
+      </div>
+
+      <div class="messages" id="messages">
+        <div class="bubble ai" style="align-self:center; max-width:90%; text-align:center; opacity:0.96;">
+          Welcome — upload a file and ask anything in it. Answers are strictly based on the uploaded document.
+        </div>
+      </div>
+
+      <div class="composer">
+        <input class="input" id="queryInput" placeholder="Ask a question about the uploaded document (Press Enter or click ▶)" />
+        <button class="send" id="sendBtn" title="Send">▶</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+/*
+  Futuristic RAG UI
+  - Drag & drop file upload (single file at a time)
+  - Multi-query support after uploading
+  - Animated orb while waiting for backend
+  - Typing animation for AI responses
+  - Uses /api/rag/ask POST (same as your Flask backend)
+*/
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fileArea = document.getElementById('fileArea');
+const filePreview = document.getElementById('filePreview');
+const fileNameEl = document.getElementById('fileName');
+const fileInfoEl = document.getElementById('fileInfo');
+const removeFileBtn = document.getElementById('removeFile');
+const startOverBtn = document.getElementById('startOver');
+const messages = document.getElementById('messages');
+const queryInput = document.getElementById('queryInput');
+const sendBtn = document.getElementById('sendBtn');
+const llmStatus = document.getElementById('llmStatus');
+const orbSmall = document.getElementById('orbSmall');
+const apiKeyHint = document.getElementById('apiKeyHint');
+
+let uploadedFile = null;
+let isProcessing = false;
+
+// utils
+function formatBytes(bytes){
+  if (!bytes) return '';
+  const sizes = ['B','KB','MB','GB','TB'];
+  if (bytes === 0) return '0 B';
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return parseFloat((bytes/Math.pow(1024,i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function setStatus(text, busy=false){
+  llmStatus.textContent = text;
+  orbSmall.style.display = busy ? 'block' : 'none';
+  apiKeyHint.style.color = busy ? 'var(--accent-a)' : 'var(--muted)';
+}
+
+function showFileUI(file){
+  uploadedFile = file;
+  fileNameEl.textContent = file.name;
+  fileInfoEl.textContent = `${formatBytes(file.size)} • ${file.type || 'file'}`;
+  fileArea.style.display = 'block';
+  dropzone.style.display = 'none';
+}
+
+function hideFileUI(){
+  uploadedFile = null;
+  fileArea.style.display = 'none';
+  dropzone.style.display = 'block';
+  fileInput.value = '';
+  setStatus('Idle', false);
+}
+
+// drag & drop handlers
+['dragenter','dragover'].forEach(evt=>{
+  dropzone.addEventListener(evt, e=>{
+    e.preventDefault(); e.stopPropagation();
+    dropzone.classList.add('dragover');
+  });
+});
+['dragleave','drop'].forEach(evt=>{
+  dropzone.addEventListener(evt, e=>{
+    e.preventDefault(); e.stopPropagation();
+    dropzone.classList.remove('dragover');
+  });
+});
+dropzone.addEventListener('drop', e=>{
+  const f = e.dataTransfer.files && e.dataTransfer.files[0];
+  if (f) handleNewFile(f);
+});
+dropzone.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', ()=> {
+  const f = fileInput.files && fileInput.files[0];
+  if (f) handleNewFile(f);
+});
+
+removeFileBtn.addEventListener('click', hideFileUI);
+startOverBtn.addEventListener('click', ()=> { hideFileUI(); scrollToTop(); });
+
+function handleNewFile(file){
+  // validate extension
+  const allowed = ['.pdf','.csv','.xlsx','.xls','.pptx','.ppt'];
+  const name = file.name.toLowerCase();
+  const ok = allowed.some(ext => name.endsWith(ext));
+  if (!ok) {
+    pushSystemMessage("Invalid file type. Supported: PDF, CSV, XLSX, PPTX.", true);
+    return;
+  }
+  showFileUI(file);
+  pushSystemMessage(`Loaded ${file.name}. You can now ask multiple questions about this file.`);
+  setStatus('File loaded', false);
+}
+
+// messaging utilities
+function pushUserMessage(text){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'bubble user';
+  wrapper.textContent = text;
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function pushAiPlaceholder(){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'bubble ai';
+  wrapper.setAttribute('data-placeholder','1');
+  wrapper.innerHTML = '<div class="meta-row"><div class="avatar ai">AI</div><div class="muted">DocSensei</div></div><div class="content"><span class="loading-text">Thinking<span class="typing-cursor"></span></span></div>';
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+  return wrapper;
+}
+
+function pushSystemMessage(text, isError=false){
+  const wrapper = document.createElement('div');
+  wrapper.className = 'bubble ai';
+  wrapper.style.alignSelf = 'center';
+  wrapper.style.maxWidth = '86%';
+  wrapper.style.background = 'linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.008))';
+  wrapper.innerHTML = `<div style="font-size:13px; color:${isError ? '#ff9b9b' : 'var(--muted)'}">${text}</div>`;
+  messages.appendChild(wrapper);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// typing animation: reveal characters progressively
+async function typeIntoElement(el, text, speed=18){
+  el.textContent = '';
+  for (let i=0;i<text.length;i++){
+    el.textContent += text[i];
+    messages.scrollTop = messages.scrollHeight;
+    await new Promise(r => setTimeout(r, speed));
+  }
+}
+
+// send logic
+async function sendQuery(){
+  if (isProcessing) return;
+  const query = queryInput.value.trim();
+  if (!query){
+    queryInput.focus();
+    return;
+  }
+  if (!uploadedFile) {
+    pushSystemMessage("Please upload a file first.", true);
+    return;
+  }
+
+  // show user bubble
+  pushUserMessage(query);
+  queryInput.value = '';
+  queryInput.disabled = true;
+  sendBtn.disabled = true;
+
+  // show AI placeholder
+  const placeholder = pushAiPlaceholder();
+  setStatus('Thinking...', true);
+  isProcessing = true;
+
+  // prepare form data with same file (support multiple questions)
+  const formData = new FormData();
+  formData.append('document', uploadedFile);
+  formData.append('query', query);
+
+  try {
+    const resp = await fetch('/api/rag/ask', {
+      method: 'POST',
+      body: formData
+    });
+
+    const json = await resp.json();
+
+    // clear placeholder content
+    const contentDiv = placeholder.querySelector('.content') || placeholder;
+    const loadingText = placeholder.querySelector('.loading-text');
+    if (loadingText) loadingText.remove();
+
+    if (!resp.ok) {
+      // error from server
+      const msg = json.answer || `Server returned ${resp.status}`;
+      contentDiv.innerHTML = `<div style="color:#ff9b9b; font-weight:700;">${msg}</div>`;
+    } else {
+      // animate typing of answer
+      const ans = json.answer || "No answer returned.";
+      // wrap in a div for typing
+      const target = document.createElement('div');
+      target.style.whiteSpace = 'pre-wrap';
+      contentDiv.appendChild(target);
+      await typeIntoElement(target, ans, 14); // speed: 14ms per char
+    }
+
+  } catch (err) {
+    const contentDiv = placeholder.querySelector('.content') || placeholder;
+    contentDiv.innerHTML = `<div style="color:#ff9b9b; font-weight:700;">Connection error: ${err.message || err}</div>`;
+  } finally {
+    // finalize
+    placeholder.removeAttribute('data-placeholder');
+    queryInput.disabled = false;
+    sendBtn.disabled = false;
+    queryInput.focus();
+    setStatus('Idle', false);
+    isProcessing = false;
+    messages.scrollTop = messages.scrollHeight;
+  }
+}
+
+// events
+sendBtn.addEventListener('click', sendQuery);
+queryInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendQuery();
+  }
+});
+
+// small helper: scroll to top of app (used when starting over)
+function scrollToTop(){
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* Minimal startup check to show API status (best-effort) */
+(async function checkApiKey() {
+  try {
+    // attempt a quick HEAD to the endpoint (no body) to detect obvious 404/500
+    const p = await fetch('/api/rag/ask', { method: 'OPTIONS' });
+    if (p.ok || p.status === 204 || p.status === 200) {
+      apiKeyHint.textContent = 'Backend reachable';
+      apiKeyHint.style.color = 'var(--muted)';
+    } else {
+      apiKeyHint.textContent = `Backend responded ${p.status}`;
+      apiKeyHint.style.color = '#ffb6b6';
+    }
+  } catch (e) {
+    apiKeyHint.textContent = 'Backend unreachable';
+    apiKeyHint.style.color = '#ff9b9b';
+  }
+})();
+
+</script>
+</body>
+</html>
