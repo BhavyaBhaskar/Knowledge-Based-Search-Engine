@@ -1,0 +1,20 @@
+# Flask Framework
+flask
+flask-cors
+
+# Environment Variables
+python-dotenv
+
+# Google Gemini (LLM)
+google-generativeai
+
+# File Processing
+pandas
+openpyxl
+pdfminer.six
+python-pptx
+
+# Optional Dependencies
+requests
+tqdm
+numpy
